@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二年级科学：科学室大侦探（4大场景20题版）</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: #0f172a;
+            user-select: none;
+            overflow-x: hidden;
+        }
+        .detective-cursor {
+            cursor: crosshair;
+        }
+        /* 保持鼠标悬停完全平稳不晃动，仅显示高亮光晕 */
+        .hotspot {
+            cursor: pointer;
+            pointer-events: all;
+            transition: filter 0.2s ease;
+        }
+        .hotspot:hover {
+            filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.95));
+        }
+        .fixed-item {
+            pointer-events: none;
+            animation: popFix 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popFix {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        .shake {
+            animation: shake 0.35s ease-in-out;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        .pulse-danger {
+            animation: pulseDanger 0.6s infinite;
+        }
+        @keyframes pulseDanger {
+            0%, 100% { color: #ef4444; }
+            50% { color: #fca5a5; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-3 md:p-5 text-white">
+
+    <!-- 顶部状态栏 -->
+    <div id="hud" class="hidden w-full max-w-5xl bg-slate-800/95 border-2 border-slate-600 rounded-2xl p-3 md:p-4 mb-3 flex flex-wrap justify-between items-center shadow-xl">
+        <div class="flex items-center space-x-3">
+            <span class="text-3xl">🕵️‍♂️</span>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <span id="scene-tag" class="bg-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded-lg text-xs">场景 1 / 4</span>
+                    <h1 id="scene-title-hud" class="font-black text-base md:text-xl text-amber-400">绿豆发芽实验桌</h1>
+                </div>
+                <p class="text-xs text-slate-300 mt-0.5">专攻第5页：找出本场景 5 处违反【操纵性技能】的错误！</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3 md:space-x-5 mt-2 sm:mt-0">
+            <!-- 总进度 -->
+            <div class="hidden md:flex bg-slate-900 px-3 py-2 rounded-xl border border-slate-700 items-center space-x-1.5">
+                <span class="text-xs text-slate-400 font-bold">总题数：</span>
+                <span id="total-solved-hud" class="text-lg font-black text-sky-400">0</span>
+                <span class="text-sm font-bold text-slate-500">/ 20</span>
+            </div>
+
+            <!-- 本关进度 -->
+            <div class="bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-700 flex items-center space-x-1.5">
+                <span class="text-xs md:text-sm text-slate-400 font-bold">本关修复：</span>
+                <span id="found-count" class="text-xl md:text-2xl font-black text-emerald-400">0</span>
+                <span class="text-base font-bold text-slate-500">/ 5</span>
+            </div>
+
+            <!-- 倒计时 -->
+            <div class="bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-700 flex items-center space-x-1.5">
+                <span class="text-lg">⏱️</span>
+                <span id="timer" class="text-xl md:text-2xl font-black text-amber-400">45s</span>
+            </div>
+
+            <!-- 返回选关 -->
+            <button onclick="returnToMenu()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold px-3 py-2.5 rounded-xl border border-slate-500 transition">
+                选关
+            </button>
+        </div>
+    </div>
+
+    <!-- 主舞台容器 -->
+    <div id="game-wrapper" class="w-full max-w-5xl bg-slate-800 rounded-3xl border-4 border-slate-600 shadow-2xl overflow-hidden relative">
+
+        <!-- 开始与场景选择界面 -->
+        <div id="start-screen" class="p-6 md:p-10 text-center bg-gradient-to-b from-slate-800 to-slate-900 flex flex-col items-center justify-center min-h-[560px]">
+            <div class="inline-block bg-amber-500/20 border border-amber-400 text-amber-300 font-bold px-4 py-1 rounded-full text-sm mb-3">
+                二年级科学 · 单元一（第5页：操纵性技能） · 4大场景共20题
+            </div>
+            <h1 class="text-3xl md:text-5xl font-black text-white mb-2 tracking-wide">🔍 科学室大侦探</h1>
+            <p class="text-slate-300 text-sm md:text-base max-w-2xl mb-6">
+                四大实验室同时发出警报！每个场景藏着 <span class="text-amber-400 font-bold">5 处错误</span>（共 <span class="text-emerald-400 font-bold">20 题</span>）。<br>
+                你可以按顺序挑战全部四关，也可以直接点击下方任意场景开始搜查！
+            </p>
+
+            <!-- 四个场景卡片网格 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-3xl mb-7 text-left">
+                <div onclick="startScene(0, true)" class="cursor-pointer bg-slate-800/90 hover:bg-slate-700 border-2 border-sky-500/60 hover:border-sky-400 rounded-2xl p-4 transition shadow-lg flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center space-x-2 mb-1">
+                            <span class="bg-sky-500 text-slate-950 font-black text-xs px-2 py-0.5 rounded">场景一</span>
+                            <span class="font-black text-lg text-white">🌱 绿豆发芽实验桌</span>
+                        </div>
+                        <p class="text-xs text-slate-300">烧杯、量筒、试管、绿豆标本、实验记录本</p>
+                    </div>
+                    <span id="card-status-0" class="text-2xl">▶️</span>
+                </div>
+
+                <div onclick="startScene(1, true)" class="cursor-pointer bg-slate-800/90 hover:bg-slate-700 border-2 border-emerald-500/60 hover:border-emerald-400 rounded-2xl p-4 transition shadow-lg flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center space-x-2 mb-1">
+                            <span class="bg-emerald-500 text-slate-950 font-black text-xs px-2 py-0.5 rounded">场景二</span>
+                            <span class="font-black text-lg text-white">🐌 生物与小动物观察角</span>
+                        </div>
+                        <p class="text-xs text-slate-300">培养皿、放大镜、小蜗牛标本、镊子、绘图簿</p>
+                    </div>
+                    <span id="card-status-1" class="text-2xl">▶️</span>
+                </div>
+
+                <div onclick="startScene(2, true)" class="cursor-pointer bg-slate-800/90 hover:bg-slate-700 border-2 border-purple-500/60 hover:border-purple-400 rounded-2xl p-4 transition shadow-lg flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center space-x-2 mb-1">
+                            <span class="bg-purple-500 text-white font-black text-xs px-2 py-0.5 rounded">场景三</span>
+                            <span class="font-black text-lg text-white">💧 水与液体测量区</span>
+                        </div>
+                        <p class="text-xs text-slate-300">漏斗、滴管、锥形瓶、水草标本、观察表</p>
+                    </div>
+                    <span id="card-status-2" class="text-2xl">▶️</span>
+                </div>
+
+                <div onclick="startScene(3, true)" class="cursor-pointer bg-slate-800/90 hover:bg-slate-700 border-2 border-orange-500/60 hover:border-orange-400 rounded-2xl p-4 transition shadow-lg flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center space-x-2 mb-1">
+                            <span class="bg-orange-500 text-slate-950 font-black text-xs px-2 py-0.5 rounded">场景四</span>
+                            <span class="font-black text-lg text-white">🧹 期末科学室大扫除</span>
+                        </div>
+                        <p class="text-xs text-slate-300">泥沙烧杯、玻璃瓶、磁铁用具、幼苗标本、画册</p>
+                    </div>
+                    <span id="card-status-3" class="text-2xl">▶️</span>
+                </div>
+            </div>
+
+            <button onclick="startFullCampaign()" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xl md:text-2xl px-10 py-4 rounded-full shadow-lg shadow-amber-500/30 transition">
+                🚀 从第一关开始连续挑战（共20题）
+            </button>
+        </div>
+
+        <!-- 互动找茬游戏场景 -->
+        <div id="play-screen" class="hidden relative detective-cursor">
+            <!-- 提示浮标 -->
+            <div id="penalty-toast" class="hidden absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white font-black px-5 py-2 rounded-full shadow-lg z-30 text-sm md:text-base">
+                ⚠️ 这里没问题哦！乱点扣除 3 秒！
+            </div>
+
+            <!-- 底部实时任务清单栏 -->
+            <div class="bg-slate-900/95 px-4 py-2 border-b border-slate-700 flex flex-wrap justify-center gap-2 text-xs md:text-sm">
+                <span id="badge-0" class="px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">❓ 清洗用具</span>
+                <span id="badge-1" class="px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">❓ 应用与处理</span>
+                <span id="badge-2" class="px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">❓ 存放用具</span>
+                <span id="badge-3" class="px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">❓ 处理标本</span>
+                <span id="badge-4" class="px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">❓ 画出标本</span>
+            </div>
+
+            <!-- 动态场景 SVG 舞台 -->
+            <div id="svg-stage-container" class="w-full"></div>
+        </div>
+
+        <!-- 弹出式修复选择题模态框 -->
+        <div id="fix-modal" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-40">
+            <div class="bg-slate-800 border-4 border-amber-400 rounded-3xl max-w-lg w-full p-6 shadow-2xl text-center">
+                <div class="inline-block bg-red-500 text-white font-black px-4 py-1 rounded-full text-sm mb-3">
+                    🚨 发现违反操纵性技能的行为！
+                </div>
+                <h3 id="modal-problem" class="text-xl md:text-2xl font-black text-white mb-2">问题描述</h3>
+                <p class="text-amber-300 font-bold text-sm mb-5">请选择正确的修复方法：</p>
+                
+                <div id="modal-options" class="space-y-3 text-left">
+                    <!-- 选项按钮动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 单关通关 / 最终结算画面 -->
+        <div id="end-screen" class="hidden p-8 md:p-12 text-center bg-gradient-to-b from-slate-800 to-slate-900 flex flex-col items-center justify-center min-h-[540px]">
+            <div id="end-icon" class="text-7xl md:text-8xl mb-4">🏆</div>
+            <h2 id="end-title" class="text-3xl md:text-4xl font-black text-amber-400 mb-3">本场景破案成功！</h2>
+            <p id="end-desc" class="text-slate-300 text-base md:text-lg max-w-lg mb-6">你找出了所有错误！</p>
+            
+            <div class="bg-slate-900 border-2 border-slate-700 rounded-2xl p-5 mb-8 w-full max-w-md">
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <div class="text-xs text-slate-400 font-bold">本关修复</div>
+                        <div id="end-found" class="text-2xl md:text-3xl font-black text-emerald-400">5 / 5</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400 font-bold">剩余时间</div>
+                        <div id="end-time" class="text-2xl md:text-3xl font-black text-amber-400">20s</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400 font-bold">累计已破</div>
+                        <div id="end-total" class="text-2xl md:text-3xl font-black text-sky-400">5 / 20</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-4">
+                <button id="next-scene-btn" onclick="goNextScene()" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xl px-8 py-4 rounded-full shadow-lg">
+                    前往下一个场景 ➡️
+                </button>
+                <button onclick="retryCurrentScene()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xl px-8 py-4 rounded-full shadow-lg">
+                    重玩本场景 🔄
+                </button>
+                <button onclick="returnToMenu()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold text-lg px-6 py-4 rounded-full border border-slate-500">
+                    返回场景列表 📋
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==================== 4大场景完整题库（每场景5题，共20题） ====================
+        const scenesData = [
+            // ---------------- 场景 0：绿豆发芽实验桌 ----------------
+            {
+                id: 0,
+                title: "🌱 绿豆发芽实验桌",
+                wallColor: "#e0f2fe",
+                floorColor: "#cbd5e1",
+                tableColor: "#d97706",
+                items: [
+                    {
+                        badgeText: "清洗用具",
+                        problem: "🔍 第1题：实验用完的烧杯沾满绿色污垢，没有清洗！",
+                        options: [
+                            "正确地清洗科学用具，并倒扣晾干",
+                            "把脏烧杯直接塞进书包带回家",
+                            "用干纸巾随便擦一下就放回橱柜"
+                        ],
+                        correctIndex: 0
+                    },
+                    {
+                        badgeText: "应用与处理",
+                        problem: "🔍 第2题：玻璃量筒横倒在桌子上，水洒了一桌！",
+                        options: [
+                            "假装没看见，直接离开科学室",
+                            "正确地应用和处理科学用具和材料，扶正量筒并擦干水渍",
+                            "拿量筒当成望远镜在科学室里玩耍"
+                        ],
+                        correctIndex: 1
+                    },
+                    {
+                        badgeText: "存放用具",
+                        problem: "🔍 第3题：两支玻璃试管乱丢在实验桌上，没有放回原位！",
+                        options: [
+                            "把玻璃试管直接丢进垃圾桶里",
+                            "把试管放在凳子上",
+                            "正确地存放科学用具和材料，放回橱柜的试管架上"
+                        ],
+                        correctIndex: 2
+                    },
+                    {
+                        badgeText: "处理标本",
+                        problem: "🔍 第4题：发芽的绿豆标本被随便丢在垃圾桶旁边的地上！",
+                        options: [
+                            "一脚踢进垃圾桶里",
+                            "正确地处理标本，把绿豆苗小心地种在泥土花盆里",
+                            "把绿豆苗捏碎玩"
+                        ],
+                        correctIndex: 1
+                    },
+                    {
+                        badgeText: "画出标本",
+                        problem: "🔍 第5题：科学记录本上的实验绘图画得乱七八糟、不清晰！",
+                        options: [
+                            "把那一页纸撕掉揉成一团",
+                            "用黑色马克笔把整页涂黑",
+                            "正确地画出标本、科学用具和材料，保持整洁清楚"
+                        ],
+                        correctIndex: 2
+                    }
+                ],
+                renderSVG: () => `
+                    <svg viewBox="0 0 1000 560" class="w-full h-auto block" onclick="handleMissClick(event)">
+                        <rect x="0" y="0" width="1000" height="400" fill="#e0f2fe" />
+                        <rect x="0" y="380" width="1000" height="180" fill="#cbd5e1" />
+                        <rect x="60" y="50" width="180" height="160" rx="10" fill="#bae6fd" stroke="#0284c7" stroke-width="8"/>
+                        <line x1="150" y1="50" x2="150" y2="210" stroke="#0284c7" stroke-width="6"/>
+                        <line x1="60" y1="130" x2="240" y2="130" stroke="#0284c7" stroke-width="6"/>
+                        <circle cx="105" cy="95" r="20" fill="#fde047" />
+                        <rect x="280" y="45" width="380" height="175" rx="8" fill="#1e293b" stroke="#92400e" stroke-width="10"/>
+                        <text x="470" y="95" fill="#f8fafc" font-size="22" font-weight="bold" text-anchor="middle">场景一：绿豆发芽实验桌</text>
+                        <text x="470" y="135" fill="#94a3b8" font-size="16" text-anchor="middle">请检查桌上的烧杯、量筒、试管、绿豆标本和记录本！</text>
+                        <text x="470" y="180" fill="#fbbf24" font-size="15" font-weight="bold" text-anchor="middle">🔍 点击找出 5 个不正确的行为</text>
+                        <!-- 橱柜 -->
+                        <rect x="710" y="45" width="230" height="310" rx="8" fill="#b45309" stroke="#78350f" stroke-width="6"/>
+                        <rect x="725" y="65" width="200" height="120" fill="#fef3c7" />
+                        <rect x="725" y="205" width="200" height="130" fill="#fef3c7" />
+                        <text x="825" y="35" fill="#78350f" font-size="16" font-weight="bold" text-anchor="middle">科学用具存放柜</text>
+                        <rect x="845" y="145" width="65" height="40" fill="none" stroke="#92400e" stroke-width="3"/>
+                        <text x="877" y="138" fill="#92400e" font-size="11" font-weight="bold" text-anchor="middle">试管架</text>
+                        <!-- 水槽 -->
+                        <rect x="30" y="290" width="180" height="150" rx="6" fill="#94a3b8" stroke="#475569" stroke-width="4"/>
+                        <rect x="45" y="275" width="150" height="25" rx="4" fill="#e2e8f0" stroke="#64748b" stroke-width="3"/>
+                        <path d="M 110 275 L 110 235 Q 110 220 125 220 L 135 220 L 135 235" fill="none" stroke="#475569" stroke-width="8" stroke-linecap="round"/>
+                        <text x="120" y="340" fill="#1e293b" font-size="16" font-weight="bold" text-anchor="middle">清洗水槽</text>
+                        <!-- 实验桌 -->
+                        <rect x="240" y="310" width="520" height="30" rx="6" fill="#d97706" stroke="#92400e" stroke-width="4"/>
+                        <rect x="270" y="340" width="35" height="170" fill="#92400e"/>
+                        <rect x="695" y="340" width="35" height="170" fill="#92400e"/>
+                        <!-- 垃圾桶与花盆 -->
+                        <g transform="translate(820, 390)">
+                            <polygon points="10,30 70,30 62,110 18,110" fill="#475569" stroke="#1e293b" stroke-width="3"/>
+                            <rect x="5" y="20" width="70" height="10" rx="3" fill="#64748b"/>
+                            <text x="40" y="75" fill="#f8fafc" font-size="13" font-weight="bold" text-anchor="middle">垃圾桶</text>
+                            <polygon points="95,45 155,45 145,110 105,110" fill="#c2410c" stroke="#7c2d12" stroke-width="3"/>
+                            <ellipse cx="125" cy="45" rx="30" ry="7" fill="#451a03"/>
+                            <text x="125" y="85" fill="#ffedd5" font-size="12" font-weight="bold" text-anchor="middle">泥土花盆</text>
+                        </g>
+
+                        <!-- 5个找茬目标 -->
+                        <g id="item-0" class="hotspot" onclick="inspectItem(event, 0)" transform="translate(275, 235)">
+                            <rect x="-15" y="-20" width="95" height="105" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <path d="M 10 10 L 10 65 Q 10 72 18 72 L 52 72 Q 60 72 60 65 L 60 10" fill="#ffffff" fill-opacity="0.85" stroke="#334155" stroke-width="4"/>
+                            <path d="M 12 45 Q 35 38 58 45 L 58 68 L 12 68 Z" fill="#65a30d"/>
+                            <path d="M 22 0 Q 17 -10 22 -18 M 42 0 Q 37 -10 42 -18" fill="none" stroke="#65a30d" stroke-width="2.5"/>
+                        </g>
+                        <g id="item-1" class="hotspot" onclick="inspectItem(event, 1)" transform="translate(380, 265)">
+                            <rect x="-15" y="-20" width="125" height="75" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <ellipse cx="85" cy="40" rx="30" ry="7" fill="#38bdf8" opacity="0.85"/>
+                            <g transform="rotate(82, 45, 25)">
+                                <rect x="32" y="-15" width="24" height="75" rx="3" fill="#e0f2fe" stroke="#0284c7" stroke-width="3"/>
+                                <rect x="26" y="58" width="36" height="6" rx="2" fill="#0284c7"/>
+                            </g>
+                        </g>
+                        <g id="item-2" class="hotspot" onclick="inspectItem(event, 2)" transform="translate(525, 272)">
+                            <rect x="-15" y="-20" width="105" height="65" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <g transform="rotate(75, 30, 20)"><rect x="22" y="-15" width="14" height="55" rx="7" fill="#fce7f3" stroke="#db2777" stroke-width="3"/></g>
+                            <g transform="rotate(102, 50, 25)"><rect x="42" y="-10" width="14" height="55" rx="7" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/></g>
+                        </g>
+                        <g id="item-3" class="hotspot" onclick="inspectItem(event, 3)" transform="translate(755, 455)">
+                            <rect x="-20" y="-20" width="90" height="75" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <ellipse cx="25" cy="30" rx="24" ry="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+                            <ellipse cx="22" cy="26" rx="8" ry="6" fill="#16a34a"/>
+                            <path d="M 22 22 Q 15 5 5 8 M 22 22 Q 32 5 40 10" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/>
+                        </g>
+                        <g id="item-4" class="hotspot" onclick="inspectItem(event, 4)" transform="translate(635, 255)">
+                            <rect x="-15" y="-15" width="105" height="80" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <polygon points="5,10 75,5 85,50 15,55" fill="#fef08a" stroke="#ca8a04" stroke-width="3"/>
+                            <path d="M 20 22 Q 45 12 35 35 T 65 25 T 30 45" fill="none" stroke="#ef4444" stroke-width="3"/>
+                            <text x="45" y="18" fill="#dc2626" font-size="11" font-weight="bold">乱画!</text>
+                        </g>
+
+                        <!-- 修复后的干净物品层 -->
+                        <g class="fixed-item">
+                            <g id="fixed-0" class="hidden" transform="translate(155, 225)">
+                                <path d="M 8 48 L 8 10 Q 8 4 14 4 L 38 4 Q 44 4 44 10 L 44 48" fill="#e0f2fe" stroke="#0284c7" stroke-width="3"/>
+                                <text x="26" y="-4" fill="#16a34a" font-size="12" font-weight="bold" text-anchor="middle">✨已洗净</text>
+                            </g>
+                            <g id="fixed-1" class="hidden" transform="translate(395, 220)">
+                                <rect x="12" y="10" width="22" height="75" rx="3" fill="#e0f2fe" stroke="#0284c7" stroke-width="3"/>
+                                <rect x="6" y="83" width="34" height="6" rx="2" fill="#0284c7"/>
+                                <text x="23" y="2" fill="#16a34a" font-size="12" font-weight="bold" text-anchor="middle">✨已扶正</text>
+                            </g>
+                            <g id="fixed-2" class="hidden" transform="translate(855, 130)">
+                                <rect x="5" y="0" width="12" height="50" rx="6" fill="#fce7f3" stroke="#db2777" stroke-width="2.5"/>
+                                <rect x="28" y="0" width="12" height="50" rx="6" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/>
+                            </g>
+                            <g id="fixed-3" class="hidden" transform="translate(932, 395)">
+                                <path d="M 13 40 L 13 15" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>
+                                <ellipse cx="5" cy="18" rx="8" ry="4" fill="#22c55e" transform="rotate(-25 5 18)"/>
+                                <ellipse cx="21" cy="18" rx="8" ry="4" fill="#22c55e" transform="rotate(25 21 18)"/>
+                                <text x="13" y="4" fill="#16a34a" font-size="12" font-weight="bold" text-anchor="middle">✨已种好</text>
+                            </g>
+                            <g id="fixed-4" class="hidden" transform="translate(635, 255)">
+                                <polygon points="5,10 75,5 85,50 15,55" fill="#ffffff" stroke="#16a34a" stroke-width="3"/>
+                                <rect x="33" y="18" width="20" height="26" fill="none" stroke="#0284c7" stroke-width="2"/>
+                                <text x="45" y="13" fill="#16a34a" font-size="11" font-weight="bold" text-anchor="middle">✨绘图清晰</text>
+                            </g>
+                        </g>
+                    </svg>
+                `
+            },
+
+            // ---------------- 场景 1：生物与小动物观察角 ----------------
+            {
+                id: 1,
+                title: "🐌 生物与小动物观察角",
+                items: [
+                    {
+                        badgeText: "清洗用具",
+                        problem: "🔍 第6题：观察过泥土和小虫子的玻璃培养皿脏兮兮的，没有清洗！",
+                        options: [
+                            "用肥皂和清水正确地清洗培养皿并擦干",
+                            "直接盖上盖子放回抽屉里",
+                            "用舌头舔干净"
+                        ],
+                        correctIndex: 0
+                    },
+                    {
+                        badgeText: "应用与处理",
+                        problem: "🔍 第7题：放大镜被随手扔在桌边，镜片朝下摩擦桌面，快刮花了！",
+                        options: [
+                            "用放大镜在太阳底下烧纸玩",
+                            "正确地应用和处理科学用具，拿好放大镜并放进保护盒",
+                            "把放大镜当成乒乓球拍"
+                        ],
+                        correctIndex: 1
+                    },
+                    {
+                        badgeText: "存放用具",
+                        problem: "🔍 第8题：金属镊子用完后丢在椅子上，没有放回科学用具盒！",
+                        options: [
+                            "把镊子折弯当玩具",
+                            "把镊子丢进洗手池下水道",
+                            "正确地存放科学用具和材料，擦干后放回工具盒"
+                        ],
+                        correctIndex: 2
+                    },
+                    {
+                        badgeText: "处理标本",
+                        problem: "🔍 第9题：活生生的小蜗牛（标本）被关在盖紧盖子的密封罐里，快要闷坏了！",
+                        options: [
+                            "继续盖紧盖子摇晃罐子",
+                            "正确地处理标本，观察完毕后把小蜗牛放回潮湿的草丛中",
+                            "把小蜗牛放进冰箱冷冻室"
+                        ],
+                        correctIndex: 1
+                    },
+                    {
+                        badgeText: "画出标本",
+                        problem: "🔍 第10题：同学在画小蜗牛标本时，胡乱给蜗牛加上了翅膀和四条腿！",
+                        options: [
+                            "觉得这样很酷，不用改",
+                            "把整本科学作业丢掉",
+                            "正确地画出标本，如实、清楚地画出蜗牛的触角和螺壳"
+                        ],
+                        correctIndex: 2
+                    }
+                ],
+                renderSVG: () => `
+                    <svg viewBox="0 0 1000 560" class="w-full h-auto block" onclick="handleMissClick(event)">
+                        <rect x="0" y="0" width="1000" height="400" fill="#dcfce7" />
+                        <rect x="0" y="380" width="1000" height="180" fill="#cbd5e1" />
+                        <!-- 生物角展示板 -->
+                        <rect x="260" y="40" width="420" height="175" rx="10" fill="#065f46" stroke="#78350f" stroke-width="10"/>
+                        <text x="470" y="90" fill="#ecfdf5" font-size="22" font-weight="bold" text-anchor="middle">场景二：生物与小动物观察角</text>
+                        <text x="470" y="130" fill="#a7f3d0" font-size="16" text-anchor="middle">爱护小动物标本，爱惜放大镜与观察工具！</text>
+                        <text x="470" y="175" fill="#fde047" font-size="15" font-weight="bold" text-anchor="middle">🔍 点击找出 5 个不正确的行为</text>
+                        <!-- 左侧窗台草丛（放生小蜗牛处） -->
+                        <rect x="40" y="150" width="180" height="90" rx="8" fill="#86efac" stroke="#16a34a" stroke-width="5"/>
+                        <path d="M 60 240 Q 70 190 80 240 M 95 240 Q 110 180 125 240 M 140 240 Q 155 195 170 240" fill="none" stroke="#15803d" stroke-width="6" stroke-linecap="round"/>
+                        <text x="130" y="140" fill="#166534" font-size="15" font-weight="bold" text-anchor="middle">户外草丛区</text>
+                        <!-- 右侧工具收纳柜 -->
+                        <rect x="720" y="55" width="220" height="290" rx="8" fill="#047857" stroke="#064e3b" stroke-width="6"/>
+                        <rect x="735" y="75" width="190" height="110" fill="#d1fae5" />
+                        <rect x="735" y="205" width="190" height="120" fill="#d1fae5" />
+                        <text x="830" y="45" fill="#064e3b" font-size="16" font-weight="bold" text-anchor="middle">观察工具收纳柜</text>
+                        <rect x="755" y="135" width="150" height="40" rx="6" fill="#a7f3d0" stroke="#059669" stroke-width="2"/>
+                        <text x="830" y="160" fill="#065f46" font-size="13" font-weight="bold" text-anchor="middle">放大镜与镊子盒</text>
+                        <!-- 观察实验桌 -->
+                        <rect x="220" y="310" width="540" height="30" rx="6" fill="#b45309" stroke="#78350f" stroke-width="4"/>
+                        <rect x="250" y="340" width="35" height="170" fill="#78350f"/>
+                        <rect x="695" y="340" width="35" height="170" fill="#78350f"/>
+                        <!-- 椅子 -->
+                        <rect x="820" y="410" width="90" height="18" rx="4" fill="#d97706" stroke="#78350f" stroke-width="3"/>
+                        <rect x="830" y="428" width="15" height="80" fill="#78350f"/>
+                        <rect x="885" y="428" width="15" height="80" fill="#78350f"/>
+
+                        <!-- 5个找茬目标 -->
+                        <!-- 0: 脏培养皿 -->
+                        <g id="item-0" class="hotspot" onclick="inspectItem(event, 0)" transform="translate(255, 265)">
+                            <rect x="-15" y="-15" width="100" height="65" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <ellipse cx="35" cy="32" rx="35" ry="12" fill="#e2e8f0" stroke="#475569" stroke-width="3"/>
+                            <ellipse cx="35" cy="30" rx="26" ry="8" fill="#78350f"/>
+                            <text x="35" y="12" fill="#78350f" font-size="12" font-weight="bold" text-anchor="middle">脏培养皿</text>
+                        </g>
+                        <!-- 1: 倒扣刮花的放大镜 -->
+                        <g id="item-1" class="hotspot" onclick="inspectItem(event, 1)" transform="translate(370, 265)">
+                            <rect x="-15" y="-15" width="110" height="65" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <ellipse cx="30" cy="35" rx="25" ry="9" fill="#38bdf8" stroke="#1e293b" stroke-width="4"/>
+                            <line x1="52" y1="32" x2="88" y2="15" stroke="#dc2626" stroke-width="8" stroke-linecap="round"/>
+                            <text x="45" y="8" fill="#dc2626" font-size="12" font-weight="bold" text-anchor="middle">镜片刮花!</text>
+                        </g>
+                        <!-- 2: 丢在椅子上的镊子 -->
+                        <g id="item-2" class="hotspot" onclick="inspectItem(event, 2)" transform="translate(825, 375)">
+                            <rect x="-15" y="-15" width="100" height="60" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <path d="M 10 25 L 70 15 L 15 33" fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round"/>
+                            <text x="40" y="8" fill="#dc2626" font-size="12" font-weight="bold" text-anchor="middle">乱放镊子</text>
+                        </g>
+                        <!-- 3: 关在密封罐里的蜗牛标本 -->
+                        <g id="item-3" class="hotspot" onclick="inspectItem(event, 3)" transform="translate(500, 235)">
+                            <rect x="-15" y="-15" width="95" height="95" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <rect x="12" y="15" width="46" height="58" rx="8" fill="#ffffff" fill-opacity="0.8" stroke="#0284c7" stroke-width="3"/>
+                            <rect x="8" y="8" width="54" height="10" rx="3" fill="#dc2626"/>
+                            <!-- 小蜗牛 -->
+                            <circle cx="35" cy="52" r="11" fill="#d97706"/>
+                            <path d="M 22 62 Q 35 64 50 60" stroke="#fde047" stroke-width="5" stroke-linecap="round"/>
+                            <text x="35" y="2" fill="#dc2626" font-size="12" font-weight="bold" text-anchor="middle">闷坏啦!</text>
+                        </g>
+                        <!-- 4: 画错翅膀的蜗牛画本 -->
+                        <g id="item-4" class="hotspot" onclick="inspectItem(event, 4)" transform="translate(615, 255)">
+                            <rect x="-15" y="-15" width="110" height="80" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <polygon points="5,10 80,5 90,50 15,55" fill="#fef08a" stroke="#ca8a04" stroke-width="3"/>
+                            <circle cx="45" cy="32" r="9" fill="#d97706"/>
+                            <path d="M 35 25 L 22 15 M 55 25 L 68 15" stroke="#dc2626" stroke-width="3"/>
+                            <text x="48" y="16" fill="#dc2626" font-size="11" font-weight="bold" text-anchor="middle">乱画翅膀!</text>
+                        </g>
+
+                        <!-- 修复层 -->
+                        <g class="fixed-item">
+                            <g id="fixed-0" class="hidden" transform="translate(255, 265)">
+                                <ellipse cx="35" cy="32" rx="35" ry="12" fill="#e0f2fe" stroke="#0284c7" stroke-width="3"/>
+                                <text x="35" y="14" fill="#16a34a" font-size="12" font-weight="bold" text-anchor="middle">✨已洗净</text>
+                            </g>
+                            <g id="fixed-1" class="hidden" transform="translate(765, 110)">
+                                <text x="65" y="18" fill="#16a34a" font-size="12" font-weight="bold" text-anchor="middle">✨已妥善收好</text>
+                            </g>
+                            <g id="fixed-2" class="hidden" transform="translate(825, 385)">
+                                <text x="40" y="15" fill="#16a34a" font-size="12" font-weight="bold" text-anchor="middle">✨已归位</text>
+                            </g>
+                            <g id="fixed-3" class="hidden" transform="translate(105, 195)">
+                                <circle cx="25" cy="25" r="10" fill="#d97706"/>
+                                <path d="M 14 34 Q 25 36 38 32" stroke="#fde047" stroke-width="4" stroke-linecap="round"/>
+                                <text x="25" y="8" fill="#166534" font-size="12" font-weight="bold" text-anchor="middle">✨已放回草丛</text>
+                            </g>
+                            <g id="fixed-4" class="hidden" transform="translate(615, 255)">
+                                <polygon points="5,10 80,5 90,50 15,55" fill="#ffffff" stroke="#16a34a" stroke-width="3"/>
+                                <circle cx="48" cy="32" r="8" fill="#d97706"/>
+                                <text x="48" y="15" fill="#16a34a" font-size="11" font-weight="bold" text-anchor="middle">✨绘图正确</text>
+                            </g>
+                        </g>
+                    </svg>
+                `
+            },
+
+            // ---------------- 场景 2：水与液体测量区 ----------------
+            {
+                id: 2,
+                title: "💧 水与液体测量区",
+                items: [
+                    {
+                        badgeText: "清洗用具",
+                        problem: "🔍 第11题：用完的塑料漏斗里还沾着浑浊的泥水，没有清洗！",
+                        options: [
+                            "用清水彻底清洗漏斗内部并晾干",
+                            "直接倒扣在干净的饮水杯上",
+                            "用手指挖一挖就不管了"
+                        ],
+                        correctIndex: 0
+                    },
+                    {
+                        badgeText: "应用与处理",
+                        problem: "🔍 第12题：玻璃锥形瓶放在桌子最边缘摇摇欲坠，随时会掉下来摔碎！",
+                        options: [
+                            "再往桌子外面推一点",
+                            "正确地应用和处理科学用具，把锥形瓶移到桌面中央稳妥处",
+                            "用书本压在锥形瓶上面"
+                        ],
+                        correctIndex: 1
+                    },
+                    {
+                        badgeText: "存放用具",
+                        problem: "🔍 第13题：实验滴管用完后随便扔在地上，没有放回滴管架！",
+                        options: [
+                            "一脚踩扁当玩具",
+                            "把滴管塞进同学的铅笔盒",
+                            "正确地存放科学用具，清洗后放回滴管架上"
+                        ],
+                        correctIndex: 2
+                    },
+                    {
+                        badgeText: "处理标本",
+                        problem: "🔍 第14题：水生植物（水蕴草标本）被捞出来扔在干巴巴的桌子上快干死了！",
+                        options: [
+                            "拿吹风机把它吹干",
+                            "正确地处理标本，把水草放回装有清水的生态缸里",
+                            "把它剪成一小段一小段"
+                        ],
+                        correctIndex: 1
+                    },
+                    {
+                        badgeText: "画出标本",
+                        problem: "🔍 第15题：画科学用具（漏斗和量筒）时不用尺子，画得歪歪扭扭看不出形状！",
+                        options: [
+                            "随便画几个圆圈代替",
+                            "直接抄旁边同学的作业本",
+                            "正确地画出科学用具和材料，使用尺子画得工整清晰"
+                        ],
+                        correctIndex: 2
+                    }
+                ],
+                renderSVG: () => `
+                    <svg viewBox="0 0 1000 560" class="w-full h-auto block" onclick="handleMissClick(event)">
+                        <rect x="0" y="0" width="1000" height="400" fill="#f3e8ff" />
+                        <rect x="0" y="380" width="1000" height="180" fill="#cbd5e1" />
+                        <!-- 挂图黑板 -->
+                        <rect x="270" y="40" width="400" height="170" rx="10" fill="#3b0764" stroke="#6b21a8" stroke-width="8"/>
+                        <text x="470" y="90" fill="#f3e8ff" font-size="22" font-weight="bold" text-anchor="middle">场景三：水与液体测量区</text>
+                        <text x="470" y="130" fill="#d8b4fe" font-size="16" text-anchor="middle">小心使用玻璃器皿，爱护水生植物标本！</text>
+                        <text x="470" y="175" fill="#fde047" font-size="15" font-weight="bold" text-anchor="middle">🔍 点击找出 5 个不正确的行为</text>
+                        <!-- 左侧生态水缸 -->
+                        <rect x="40" y="160" width="170" height="110" rx="8" fill="#bae6fd" stroke="#0284c7" stroke-width="5"/>
+                        <rect x="45" y="185" width="160" height="80" fill="#38bdf8" opacity="0.6"/>
+                        <text x="125" y="150" fill="#0369a1" font-size="15" font-weight="bold" text-anchor="middle">水生植物生态缸</text>
+                        <!-- 右侧器材架 -->
+                        <rect x="720" y="55" width="220" height="280" rx="8" fill="#7e22ce" stroke="#581c87" stroke-width="6"/>
+                        <rect x="735" y="80" width="190" height="110" fill="#faf5ff" />
+                        <text x="830" y="45" fill="#581c87" font-size="16" font-weight="bold" text-anchor="middle">玻璃与滴管器材架</text>
+                        <rect x="765" y="145" width="130" height="35" rx="4" fill="#e9d5ff" stroke="#9333ea" stroke-width="2"/>
+                        <text x="830" y="167" fill="#581c87" font-size="13" font-weight="bold" text-anchor="middle">专用滴管架</text>
+                        <!-- 实验桌 -->
+                        <rect x="220" y="310" width="540" height="30" rx="6" fill="#9333ea" stroke="#581c87" stroke-width="4"/>
+                        <rect x="250" y="340" width="35" height="170" fill="#581c87"/>
+                        <rect x="695" y="340" width="35" height="170" fill="#581c87"/>
+
+                        <!-- 5个找茬目标 -->
+                        <!-- 0: 脏漏斗 -->
+                        <g id="item-0" class="hotspot" onclick="inspectItem(event, 0)" transform="translate(330, 245)">
+                            <rect x="-15" y="-15" width="90" height="80" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <polygon points="10,15 60,15 42,42 42,65 28,65 28,42" fill="#a16207" stroke="#334155" stroke-width="3"/>
+                            <text x="35" y="8" fill="#a16207" font-size="12" font-weight="bold" text-anchor="middle">脏漏斗</text>
+                        </g>
+                        <!-- 1: 桌边摇摇欲坠的锥形瓶 -->
+                        <g id="item-1" class="hotspot" onclick="inspectItem(event, 1)" transform="translate(205, 235)">
+                            <rect x="-15" y="-15" width="85" height="90" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <g transform="rotate(-14, 30, 65)">
+                                <polygon points="22,10 38,10 52,70 8,70" fill="#e0f2fe" stroke="#0284c7" stroke-width="3"/>
+                                <polygon points="14,45 46,45 50,68 10,68" fill="#38bdf8"/>
+                            </g>
+                            <text x="25" y="4" fill="#dc2626" font-size="12" font-weight="bold" text-anchor="middle">快掉啦!</text>
+                        </g>
+                        <!-- 2: 掉在地上的滴管 -->
+                        <g id="item-2" class="hotspot" onclick="inspectItem(event, 2)" transform="translate(460, 440)">
+                            <rect x="-15" y="-15" width="120" height="60" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <rect x="10" y="20" width="22" height="16" rx="8" fill="#dc2626"/>
+                            <polygon points="32,23 85,26 85,30 32,33" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
+                            <text x="50" y="10" fill="#dc2626" font-size="12" font-weight="bold" text-anchor="middle">滴管掉地上!</text>
+                        </g>
+                        <!-- 3: 干巴巴的水草标本 -->
+                        <g id="item-3" class="hotspot" onclick="inspectItem(event, 3)" transform="translate(465, 265)">
+                            <rect x="-15" y="-15" width="115" height="65" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <path d="M 10 35 Q 40 20 85 35 M 25 28 L 35 18 M 50 28 L 60 18" fill="none" stroke="#65a30d" stroke-width="5" stroke-linecap="round"/>
+                            <text x="48" y="10" fill="#ca8a04" font-size="12" font-weight="bold" text-anchor="middle">水草快干死了!</text>
+                        </g>
+                        <!-- 4: 画得歪扭的用具图 -->
+                        <g id="item-4" class="hotspot" onclick="inspectItem(event, 4)" transform="translate(615, 255)">
+                            <rect x="-15" y="-15" width="110" height="80" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <polygon points="5,10 80,5 90,50 15,55" fill="#fef08a" stroke="#ca8a04" stroke-width="3"/>
+                            <path d="M 25 20 C 60 15, 15 45, 70 42" fill="none" stroke="#dc2626" stroke-width="3"/>
+                            <text x="48" y="15" fill="#dc2626" font-size="11" font-weight="bold" text-anchor="middle">画得歪扭!</text>
+                        </g>
+
+                        <!-- 修复层 -->
+                        <g class="fixed-item">
+                            <g id="fixed-0" class="hidden" transform="translate(330, 245)">
+                                <polygon points="10,15 60,15 42,42 42,65 28,65 28,42" fill="#e0f2fe" stroke="#0284c7" stroke-width="3"/>
+                                <text x="35" y="8" fill="#16a34a" font-size="12" font-weight="bold" text-anchor="middle">✨已洗净</text>
+                            </g>
+                            <g id="fixed-1" class="hidden" transform="translate(255, 235)">
+                                <polygon points="22,10 38,10 52,70 8,70" fill="#e0f2fe" stroke="#0284c7" stroke-width="3"/>
+                                <text x="30" y="4" fill="#16a34a" font-size="12" font-weight="bold" text-anchor="middle">✨已放稳</text>
+                            </g>
+                            <g id="fixed-2" class="hidden" transform="translate(800, 115)">
+                                <text x="30" y="20" fill="#16a34a" font-size="12" font-weight="bold" text-anchor="middle">✨已放回架子</text>
+                            </g>
+                            <g id="fixed-3" class="hidden" transform="translate(85, 200)">
+                                <path d="M 10 45 Q 25 20 15 5 M 35 45 Q 50 20 40 5" fill="none" stroke="#16a34a" stroke-width="5" stroke-linecap="round"/>
+                                <text x="35" y="0" fill="#0369a1" font-size="12" font-weight="bold" text-anchor="middle">✨已放回水中</text>
+                            </g>
+                            <g id="fixed-4" class="hidden" transform="translate(615, 255)">
+                                <polygon points="5,10 80,5 90,50 15,55" fill="#ffffff" stroke="#16a34a" stroke-width="3"/>
+                                <polygon points="35,20 55,20 48,35 48,45 42,45 42,35" fill="none" stroke="#0284c7" stroke-width="2"/>
+                                <text x="48" y="14" fill="#16a34a" font-size="11" font-weight="bold" text-anchor="middle">✨绘图工整</text>
+                            </g>
+                        </g>
+                    </svg>
+                `
+            },
+
+            // ---------------- 场景 3：期末科学室大扫除 ----------------
+            {
+                id: 3,
+                title: "🧹 期末科学室大扫除",
+                items: [
+                    {
+                        badgeText: "清洗用具",
+                        problem: "🔍 第16题：做完泥沙沉降实验的烧杯底部全是厚泥巴，没有清洗！",
+                        options: [
+                            "把泥水倒进过滤网，并用清水把烧杯洗刷干净",
+                            "直接用抹布把泥巴抹在实验桌上",
+                            "把泥巴烧杯藏在橱柜最里面"
+                        ],
+                        correctIndex: 0
+                    },
+                    {
+                        badgeText: "应用与处理",
+                        problem: "🔍 第17题：玻璃集气瓶被拿来当成锤子敲击核桃，非常危险！",
+                        options: [
+                            "继续用力敲打",
+                            "正确地应用和处理科学用具和材料，立即停止危险行为并检查瓶身",
+                            "把玻璃瓶扔到天花板上"
+                        ],
+                        correctIndex: 1
+                    },
+                    {
+                        badgeText: "存放用具",
+                        problem: "🔍 第18题：磁铁和铁粉实验盘散落在走廊地上，没有分类存放！",
+                        options: [
+                            "用脚踢到桌子底下",
+                            "全部倒进鱼缸里",
+                            "正确地存放科学用具和材料，擦净后放回磁铁专用箱"
+                        ],
+                        correctIndex: 2
+                    },
+                    {
+                        badgeText: "处理标本",
+                        problem: "🔍 第19题：辣椒幼苗标本在暴晒的窗台上快枯萎了，没人照顾！",
+                        options: [
+                            "拔出来当成扫把扫地",
+                            "正确地处理标本，移到通风有适量阳光处并浇水照顾",
+                            "用可乐代替水浇给幼苗"
+                        ],
+                        correctIndex: 1
+                    },
+                    {
+                        badgeText: "画出标本",
+                        problem: "🔍 第20题：期末科学展览的标本绘图连名称和线条都没画完整！",
+                        options: [
+                            "随手画个大叉叉交差",
+                            "把别人的名字改成自己的",
+                            "正确地画出标本、科学用具和材料，认真补全细节与名称"
+                        ],
+                        correctIndex: 2
+                    }
+                ],
+                renderSVG: () => `
+                    <svg viewBox="0 0 1000 560" class="w-full h-auto block" onclick="handleMissClick(event)">
+                        <rect x="0" y="0" width="1000" height="400" fill="#ffedd5" />
+                        <rect x="0" y="380" width="1000" height="180" fill="#cbd5e1" />
+                        <!-- 荣誉榜黑板 -->
+                        <rect x="270" y="40" width="400" height="170" rx="10" fill="#7c2d12" stroke="#431407" stroke-width="8"/>
+                        <text x="470" y="90" fill="#ffedd5" font-size="22" font-weight="bold" text-anchor="middle">场景四：期末科学室大扫除</text>
+                        <text x="470" y="130" fill="#fed7aa" font-size="16" text-anchor="middle">终极考验！完成最后 5 项检查即可成为神探！</text>
+                        <text x="470" y="175" fill="#fde047" font-size="15" font-weight="bold" text-anchor="middle">🔍 点击找出最后 5 个错误</text>
+                        <!-- 左侧花架 -->
+                        <rect x="40" y="210" width="160" height="25" rx="4" fill="#b45309"/>
+                        <text x="120" y="255" fill="#7c2d12" font-size="15" font-weight="bold" text-anchor="middle">植物标本养护架</text>
+                        <!-- 右侧器材专用柜 -->
+                        <rect x="720" y="55" width="220" height="280" rx="8" fill="#c2410c" stroke="#7c2d12" stroke-width="6"/>
+                        <rect x="735" y="80" width="190" height="110" fill="#fff7ed" />
+                        <text x="830" y="45" fill="#7c2d12" font-size="16" font-weight="bold" text-anchor="middle">期末器材存放柜</text>
+                        <rect x="765" y="140" width="130" height="40" rx="4" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+                        <text x="830" y="165" fill="#9a3412" font-size="13" font-weight="bold" text-anchor="middle">磁铁与工具箱</text>
+                        <!-- 实验桌 -->
+                        <rect x="220" y="310" width="540" height="30" rx="6" fill="#ea580c" stroke="#7c2d12" stroke-width="4"/>
+                        <rect x="250" y="340" width="35" height="170" fill="#7c2d12"/>
+                        <rect x="695" y="340" width="35" height="170" fill="#7c2d12"/>
+
+                        <!-- 5个找茬目标 -->
+                        <!-- 0: 泥巴烧杯 -->
+                        <g id="item-0" class="hotspot" onclick="inspectItem(event, 0)" transform="translate(260, 235)">
+                            <rect x="-15" y="-15" width="90" height="90" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <path d="M 10 10 L 10 65 Q 10 72 18 72 L 52 72 Q 60 72 60 65 L 60 10" fill="#ffffff" fill-opacity="0.85" stroke="#334155" stroke-width="4"/>
+                            <rect x="12" y="45" width="46" height="24" fill="#78350f"/>
+                            <text x="35" y="4" fill="#78350f" font-size="12" font-weight="bold" text-anchor="middle">全是泥沙!</text>
+                        </g>
+                        <!-- 1: 被敲击的玻璃瓶 -->
+                        <g id="item-1" class="hotspot" onclick="inspectItem(event, 1)" transform="translate(385, 240)">
+                            <rect x="-15" y="-15" width="95" height="85" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <rect x="18" y="18" width="40" height="50" rx="6" fill="#e0f2fe" stroke="#0284c7" stroke-width="3"/>
+                            <path d="M 30 30 L 42 45 L 34 55" fill="none" stroke="#dc2626" stroke-width="3"/>
+                            <text x="38" y="8" fill="#dc2626" font-size="12" font-weight="bold" text-anchor="middle">危险敲击!</text>
+                        </g>
+                        <!-- 2: 散落地上的磁铁 -->
+                        <g id="item-2" class="hotspot" onclick="inspectItem(event, 2)" transform="translate(460, 435)">
+                            <rect x="-15" y="-15" width="110" height="75" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <path d="M 20 45 L 20 20 Q 20 8 35 8 Q 50 8 50 20 L 50 45" fill="none" stroke="#dc2626" stroke-width="10"/>
+                            <text x="38" y="0" fill="#dc2626" font-size="12" font-weight="bold" text-anchor="middle">磁铁丢地上!</text>
+                        </g>
+                        <!-- 3: 枯萎在桌角的幼苗标本 -->
+                        <g id="item-3" class="hotspot" onclick="inspectItem(event, 3)" transform="translate(505, 245)">
+                            <rect x="-15" y="-15" width="90" height="80" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <polygon points="15,40 55,40 48,65 22,65" fill="#c2410c"/>
+                            <path d="M 35 40 Q 45 25 58 32" fill="none" stroke="#ca8a04" stroke-width="4" stroke-linecap="round"/>
+                            <text x="35" y="12" fill="#ca8a04" font-size="12" font-weight="bold" text-anchor="middle">缺水枯萎!</text>
+                        </g>
+                        <!-- 4: 画一半的标本画册 -->
+                        <g id="item-4" class="hotspot" onclick="inspectItem(event, 4)" transform="translate(620, 255)">
+                            <rect x="-15" y="-15" width="110" height="80" fill="rgba(255,255,255,0.01)" pointer-events="all" />
+                            <polygon points="5,10 80,5 90,50 15,55" fill="#fef08a" stroke="#ca8a04" stroke-width="3"/>
+                            <text x="48" y="36" fill="#dc2626" font-size="14" font-weight="bold" text-anchor="middle">未完成 ❌</text>
+                        </g>
+
+                        <!-- 修复层 -->
+                        <g class="fixed-item">
+                            <g id="fixed-0" class="hidden" transform="translate(260, 235)">
+                                <path d="M 10 10 L 10 65 Q 10 72 18 72 L 52 72 Q 60 72 60 65 L 60 10" fill="#e0f2fe" stroke="#0284c7" stroke-width="4"/>
+                                <text x="35" y="4" fill="#16a34a" font-size="12" font-weight="bold" text-anchor="middle">✨已洗净</text>
+                            </g>
+                            <g id="fixed-1" class="hidden" transform="translate(385, 240)">
+                                <rect x="18" y="18" width="40" height="50" rx="6" fill="#e0f2fe" stroke="#16a34a" stroke-width="3"/>
+                                <text x="38" y="8" fill="#16a34a" font-size="12" font-weight="bold" text-anchor="middle">✨已安全放好</text>
+                            </g>
+                            <g id="fixed-2" class="hidden" transform="translate(800, 115)">
+                                <text x="30" y="20" fill="#16a34a" font-size="12" font-weight="bold" text-anchor="middle">✨已收进工具箱</text>
+                            </g>
+                            <g id="fixed-3" class="hidden" transform="translate(85, 145)">
+                                <polygon points="15,40 55,40 48,65 22,65" fill="#c2410c"/>
+                                <path d="M 35 40 L 35 15 M 35 25 L 22 18 M 35 22 L 48 15" stroke="#16a34a" stroke-width="4" stroke-linecap="round"/>
+                                <text x="35" y="6" fill="#166534" font-size="12" font-weight="bold" text-anchor="middle">✨已浇水养护</text>
+                            </g>
+                            <g id="fixed-4" class="hidden" transform="translate(620, 255)">
+                                <polygon points="5,10 80,5 90,50 15,55" fill="#ffffff" stroke="#16a34a" stroke-width="3"/>
+                                <text x="48" y="36" fill="#16a34a" font-size="13" font-weight="bold" text-anchor="middle">✨绘图完整</text>
+                            </g>
+                        </g>
+                    </svg>
+                `
+            }
+        ];
+
+        // 全局状态记录
+        let currentSceneIdx = 0;
+        let isCampaignMode = false;
+        let completedScenes = [false, false, false, false];
+        let fixedState = [false, false, false, false, false];
+        let timeLeft = 45;
+        let timerId = null;
+        let isModalOpen = false;
+        let isGameOver = false;
+
+        // 从第一关开启全通关挑战
+        function startFullCampaign() {
+            completedScenes = [false, false, false, false];
+            startScene(0, false);
+        }
+
+        // 启动指定场景
+        function startScene(sceneIdx, singleMode = false) {
+            currentSceneIdx = sceneIdx;
+            if (singleMode) {
+                isCampaignMode = false;
+            } else {
+                isCampaignMode = true;
+            }
+
+            fixedState = [false, false, false, false, false];
+            timeLeft = 45;
+            isModalOpen = false;
+            isGameOver = false;
+
+            const scene = scenesData[currentSceneIdx];
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('end-screen').classList.add('hidden');
+            document.getElementById('fix-modal').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+            document.getElementById('play-screen').classList.remove('hidden');
+
+            document.getElementById('scene-tag').innerText = `场景 ${currentSceneIdx + 1} / 4`;
+            document.getElementById('scene-title-hud').innerText = scene.title;
+
+            // 渲染当前场景的 SVG 画面
+            document.getElementById('svg-stage-container').innerHTML = scene.renderSVG();
+
+            // 重置顶部5个徽章
+            for (let i = 0; i < 5; i++) {
+                const badge = document.getElementById(`badge-${i}`);
+                badge.className = "px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700";
+                badge.innerText = `❓ ${scene.items[i].badgeText}`;
+            }
+
+            updateHUD();
+            clearInterval(timerId);
+            timerId = setInterval(() => {
+                if (!isModalOpen && !isGameOver) {
+                    timeLeft--;
+                    updateHUD();
+                    if (timeLeft <= 0) {
+                        timeLeft = 0;
+                        updateHUD();
+                        finishScene(false);
+                    }
+                }
+            }, 1000);
+        }
+
+        function getTotalSolvedCount() {
+            let pastSolved = 0;
+            for (let s = 0; s < 4; s++) {
+                if (s !== currentSceneIdx && completedScenes[s]) {
+                    pastSolved += 5;
+                }
+            }
+            const currentSolved = fixedState.filter(Boolean).length;
+            return pastSolved + currentSolved;
+        }
+
+        function updateHUD() {
+            const count = fixedState.filter(Boolean).length;
+            document.getElementById('found-count').innerText = count;
+            document.getElementById('total-solved-hud').innerText = getTotalSolvedCount();
+            
+            const timerEl = document.getElementById('timer');
+            timerEl.innerText = timeLeft + 's';
+            if (timeLeft <= 10) {
+                timerEl.classList.add('pulse-danger');
+            } else {
+                timerEl.classList.remove('pulse-danger');
+            }
+        }
+
+        // 点击空白处扣3秒
+        function handleMissClick(event) {
+            if (isModalOpen || isGameOver) return;
+            let el = event.target;
+            while (el && el !== event.currentTarget) {
+                if (el.classList && el.classList.contains('hotspot')) return;
+                el = el.parentNode;
+            }
+
+            timeLeft = Math.max(0, timeLeft - 3);
+            updateHUD();
+
+            const wrapper = document.getElementById('game-wrapper');
+            wrapper.classList.add('shake');
+            setTimeout(() => wrapper.classList.remove('shake'), 350);
+
+            const toast = document.getElementById('penalty-toast');
+            toast.classList.remove('hidden');
+            clearTimeout(window.toastTimeout);
+            window.toastTimeout = setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 1200);
+
+            if (timeLeft <= 0) {
+                finishScene(false);
+            }
+        }
+
+        // 点击错误目标
+        function inspectItem(event, id) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            if (fixedState[id] || isModalOpen || isGameOver) return;
+
+            isModalOpen = true;
+            const data = scenesData[currentSceneIdx].items[id];
+            document.getElementById('modal-problem').innerText = data.problem;
+
+            const optionsContainer = document.getElementById('modal-options');
+            optionsContainer.innerHTML = data.options.map((opt, idx) => `
+                <button onclick="attemptFix(${id}, ${idx})" class="w-full bg-slate-700 hover:bg-amber-500 hover:text-slate-950 border-2 border-slate-600 hover:border-amber-300 text-white font-bold p-4 rounded-2xl transition flex items-center space-x-3">
+                    <span class="w-8 h-8 rounded-full bg-slate-900 text-amber-400 flex items-center justify-center font-black shrink-0">${['A','B','C'][idx]}</span>
+                    <span>${opt}</span>
+                </button>
+            `).join('');
+
+            document.getElementById('fix-modal').classList.remove('hidden');
+        }
+
+        // 尝试修复
+        function attemptFix(id, chosenIdx) {
+            const data = scenesData[currentSceneIdx].items[id];
+            if (chosenIdx === data.correctIndex) {
+                fixedState[id] = true;
+                isModalOpen = false;
+                document.getElementById('fix-modal').classList.add('hidden');
+
+                document.getElementById(`item-${id}`).classList.add('hidden');
+                document.getElementById(`fixed-${id}`).classList.remove('hidden');
+
+                const badge = document.getElementById(`badge-${id}`);
+                badge.className = "px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400 font-bold";
+                badge.innerText = `✅ ${data.badgeText}`;
+
+                updateHUD();
+
+                if (fixedState.every(Boolean)) {
+                    completedScenes[currentSceneIdx] = true;
+                    setTimeout(() => finishScene(true), 600);
+                }
+            } else {
+                timeLeft = Math.max(0, timeLeft - 2);
+                updateHUD();
+                const modalBox = document.querySelector('#fix-modal > div');
+                modalBox.classList.add('shake');
+                setTimeout(() => modalBox.classList.remove('shake'), 350);
+
+                if (timeLeft <= 0) {
+                    isModalOpen = false;
+                    document.getElementById('fix-modal').classList.add('hidden');
+                    finishScene(false);
+                }
+            }
+        }
+
+        // 单关结束结算
+        function finishScene(isWin) {
+            isGameOver = true;
+            clearInterval(timerId);
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('play-screen').classList.add('hidden');
+            document.getElementById('fix-modal').classList.add('hidden');
+
+            const endScreen = document.getElementById('end-screen');
+            endScreen.classList.remove('hidden');
+
+            const count = fixedState.filter(Boolean).length;
+            const totalSolved = getTotalSolvedCount();
+
+            document.getElementById('end-found').innerText = `${count} / 5`;
+            document.getElementById('end-time').innerText = `${timeLeft}s`;
+            document.getElementById('end-total').innerText = `${totalSolved} / 20`;
+
+            const nextBtn = document.getElementById('next-scene-btn');
+            const hasNextScene = currentSceneIdx < 3;
+
+            if (isWin) {
+                if (!hasNextScene && completedScenes.every(Boolean)) {
+                    document.getElementById('end-icon').innerText = '👑🏆';
+                    document.getElementById('end-title').innerText = '全套20题大通关！超级神探！';
+                    document.getElementById('end-desc').innerText = '太不可思议了！你完美解决了全部4个科学室场景的20道难题，完全掌握了第5页的【操纵性技能】！';
+                    nextBtn.classList.add('hidden');
+                } else {
+                    document.getElementById('end-icon').innerText = '🎉';
+                    document.getElementById('end-title').innerText = `【${scenesData[currentSceneIdx].title}】破案成功！`;
+                    document.getElementById('end-desc').innerText = '本场景的 5 处错误已经全部修复！准备好挑战下一个科学室了吗？';
+                    if (hasNextScene) {
+                        nextBtn.classList.remove('hidden');
+                    } else {
+                        nextBtn.classList.add('hidden');
+                    }
+                }
+            } else {
+                document.getElementById('end-icon').innerText = '⏰';
+                document.getElementById('end-title').innerText = '时间到！差一点点！';
+                document.getElementById('end-desc').innerText = '这个科学室还没完全整理好，再试一次，一定能全部找出来！';
+                nextBtn.classList.add('hidden');
+            }
+        }
+
+        function goNextScene() {
+            if (currentSceneIdx < 3) {
+                startScene(currentSceneIdx + 1, !isCampaignMode);
+            }
+        }
+
+        function retryCurrentScene() {
+            startScene(currentSceneIdx, !isCampaignMode);
+        }
+
+        function returnToMenu() {
+            clearInterval(timerId);
+            isGameOver = true;
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('play-screen').classList.add('hidden');
+            document.getElementById('fix-modal').classList.add('hidden');
+            document.getElementById('end-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+
+            // 更新选关卡片上的通关对勾状态
+            for (let i = 0; i < 4; i++) {
+                const statusEl = document.getElementById(`card-status-${i}`);
+                statusEl.innerText = completedScenes[i] ? '✅' : '▶️';
+            }
+        }
+    </script>
+</body>
+</html>
